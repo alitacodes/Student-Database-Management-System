@@ -25,7 +25,7 @@ class StudentSystem:
         # 2. Courses Table
         cursor.execute('''CREATE TABLE IF NOT EXISTS courses (
                             cid INTEGER PRIMARY KEY AUTOINCREMENT,
-                            course_name TEXT NOT NULL UNIQUE)''')
+                            dept TEXT NOT NULL UNIQUE)''')
 
         # 3. Enrollments Table (Linking Students to Courses)
         cursor.execute('''CREATE TABLE IF NOT EXISTS enrollments (
@@ -41,23 +41,23 @@ class StudentSystem:
                             FOREIGN KEY(sid) REFERENCES students(sid) ON DELETE CASCADE)''')
         self.conn.commit()
 
-    def enroll_student_in_course(self, enroll_num, course_name):
+    def enroll_student_in_course(self, enroll_num, dept):
         """Logic to link a student to a specific course name."""
         cursor = self.conn.cursor()
         
         # Ensure course exists, if not, create it
-        cursor.execute("INSERT OR IGNORE INTO courses (course_name) VALUES (?)", (course_name,))
+        cursor.execute("INSERT OR IGNORE INTO courses (dept) VALUES (?)", (dept,))
         
         # Get IDs
         cursor.execute("SELECT sid FROM students WHERE enroll_number = ?", (enroll_num,))
         s_res = cursor.fetchone()
-        cursor.execute("SELECT cid FROM courses WHERE course_name = ?", (course_name,))
+        cursor.execute("SELECT cid FROM courses WHERE dept = ?", (dept,))
         c_res = cursor.fetchone()
 
         if s_res and c_res:
             cursor.execute("INSERT INTO enrollments (sid, cid) VALUES (?, ?)", (s_res[0], c_res[0]))
             self.conn.commit()
-            print(f"Enrolled successfully in {course_name}.")
+            print(f"Enrolled successfully in {dept}.")
         else:
             print("Error: Student not found.")
 
@@ -67,7 +67,7 @@ class StudentSystem:
         Joins Students + Performance + Enrollments + Courses
         """
         query = '''
-            SELECT s.sid, s.name, s.enroll_number, c.course_name, p.marks 
+            SELECT s.sid, s.name, s.enroll_number, c.dept, p.marks 
             FROM students s 
             LEFT JOIN performance p ON s.sid = p.sid
             LEFT JOIN enrollments e ON s.sid = e.sid
@@ -75,7 +75,7 @@ class StudentSystem:
         '''
         
         if search_term:
-            query += " WHERE s.name LIKE ? OR s.enroll_number LIKE ? OR c.course_name LIKE ?"
+            query += " WHERE s.name LIKE ? OR s.enroll_number LIKE ? OR c.dept LIKE ?"
             wildcard = f"%{search_term}%"
             df = pd.read_sql_query(query, self.conn, params=(wildcard, wildcard, wildcard))
         else:
